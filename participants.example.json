@@ -1,0 +1,9 @@
+[
+  { "name": "Alice", "phone": "555-111-0001" },
+  { "name": "Bao",   "phone": "555-111-0002" },
+  { "name": "Chris", "phone": "555-111-0003" },
+  { "name": "Dana",  "phone": "555-111-0004" },
+  { "name": "Eli",   "phone": "555-111-0005" },
+  { "name": "Fran",  "phone": "555-111-0006" },
+  { "name": "Gia",   "phone": "555-111-0007" }
+]

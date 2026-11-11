@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Secret Santa</title>
+  <style>
+    :root {
+      --red: #b3261e; --red-soft: #fbe9e7; --green: #1f6b3a; --green-soft: #e6f2ea;
+      --bg: #fbf7f2; --card: #fff; --text: #222; --muted: #6b6b6b; --line: #e7e0d8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+    main { max-width: 1000px; margin: 0 auto; padding: 24px 16px 48px; }
+    h1 { color: var(--red); margin: 0; font-size: 1.6rem; }
+    h2 { margin: 0; font-size: 1.15rem; }
+    a { color: var(--green); }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .topbar .who { color: var(--muted); }
+    .card { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+    /* Login */
+    #login { max-width: 420px; margin: 40px auto 0; }
+    #login h1 { text-align: center; margin-bottom: 20px; }
+
+    /* Dashboards */
+    .boards { display: grid; gap: 16px; grid-template-columns: 1fr; }
+    @media (min-width: 820px) { .boards { grid-template-columns: 1fr 1fr; align-items: start; } }
+    .board-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .board.recipient h2 { color: var(--red); }
+    .board.mine h2 { color: var(--green); }
+    .sub { color: var(--muted); margin: 0 0 16px; font-size: .95rem; }
+
+    .items { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+    .item { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+    .item-top { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+    .item-name { font-weight: 600; word-break: break-word; }
+    .links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .links a { font-size: .85rem; text-decoration: none; background: var(--green-soft); padding: 4px 10px; border-radius: 999px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .links a:hover { text-decoration: underline; }
+    .no-links { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+    .actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .mystery { text-align: center; padding: 28px 16px; border-radius: 12px; background: var(--red-soft); }
+    .mystery-gift { font-size: 2.6rem; line-height: 1; margin-bottom: 10px; }
+    .mystery-title { font-weight: 600; font-size: 1.05rem; color: var(--red); }
+    .mystery-sub { color: var(--muted); font-size: .92rem; margin-top: 6px; }
+    .sub:empty { display: none; }
+    .empty { color: var(--muted); text-align: center; padding: 24px 8px; border: 1px dashed var(--line); border-radius: 12px; }
+
+    /* Form */
+    label { display: block; font-size: .9rem; color: var(--muted); margin: 12px 0 6px; }
+    input, textarea { width: 100%; padding: 11px 12px; font-size: 1rem; border: 1px solid #ccc; border-radius: 10px; font-family: inherit; }
+    textarea { min-height: 80px; resize: vertical; }
+    input:focus, textarea:focus { outline: 2px solid var(--green); outline-offset: 1px; border-color: transparent; }
+
+    /* Collapsible notes on each item */
+    .notes { margin-top: 8px; }
+    .notes summary { cursor: pointer; font-size: .85rem; color: var(--muted); list-style: none; display: inline-flex; align-items: center; gap: 4px; user-select: none; }
+    .notes summary::-webkit-details-marker { display: none; }
+    .notes summary::before { content: '▸'; display: inline-block; transition: transform .15s; }
+    .notes[open] summary::before { transform: rotate(90deg); }
+    .notes summary:hover { color: var(--text); }
+    .notes-body { margin-top: 6px; padding: 10px 12px; background: var(--bg); border-radius: 10px; font-size: .92rem; white-space: pre-wrap; word-break: break-word; }
+    .url-row { display: flex; gap: 6px; margin-bottom: 6px; }
+    #itemForm { border: 1px solid var(--line); border-radius: 12px; padding: 4px 14px 14px; margin-bottom: 14px; background: #fdfbf8; }
+    .form-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+
+    button { font: inherit; border: 0; border-radius: 10px; cursor: pointer; }
+    .btn { padding: 10px 16px; background: var(--red); color: #fff; }
+    .btn.green { background: var(--green); }
+    .btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+    .link-btn { background: none; color: var(--green); padding: 4px 0; font-size: .9rem; }
+    .icon-btn { background: none; color: var(--muted); padding: 4px 8px; font-size: .85rem; border-radius: 8px; }
+    .icon-btn:hover { background: var(--bg); color: var(--text); }
+    .icon-btn.danger:hover { color: var(--red); background: var(--red-soft); }
+
+    .msg { margin-top: 10px; min-height: 1.2em; font-size: .9rem; }
+    #itemForm .msg:empty { display: none; }
+    .err { color: var(--red); }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <!-- Login -->
+  <form id="login" class="card" hidden>
+    <h1>🎁 Secret Santa</h1>
+    <label for="phone">Enter your phone number</label>
+    <input id="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" required>
+    <button class="btn" type="submit" style="margin-top:12px">Enter</button>
+    <div id="loginMsg" class="msg err"></div>
+  </form>
+
+  <!-- Dashboards -->
+  <div id="app" hidden>
+    <div class="topbar">
+      <h1>🎁 Secret Santa</h1>
+      <div class="who">Hi <strong id="myName"></strong> · <button id="logout" class="link-btn">Log out</button></div>
+    </div>
+
+    <div class="boards">
+      <section class="card board recipient">
+        <div class="board-head"><h2 id="recipientTitle">Your recipient</h2></div>
+        <p class="sub" id="recipientSub"></p>
+        <ul class="items" id="recipientItems"></ul>
+      </section>
+
+      <section class="card board mine">
+        <div class="board-head">
+          <h2>My wishlist</h2>
+          <button id="addBtn" class="btn green">+ Add item</button>
+        </div>
+        <p class="sub">Your Secret Santa sees this list.</p>
+
+        <form id="itemForm" hidden>
+          <label for="itemName">What do you want?</label>
+          <input id="itemName" maxlength="200" placeholder="e.g. Cozy wool socks, size M" required>
+          <label>Links (optional)</label>
+          <div id="urlRows"></div>
+          <button type="button" id="addUrl" class="link-btn">+ Add another link</button>
+          <label for="itemNotes">Notes (optional)</label>
+          <textarea id="itemNotes" maxlength="2000" placeholder="Size, color, any of these is fine…"></textarea>
+          <div class="form-actions">
+            <button type="submit" class="btn green" id="saveBtn">Add to wishlist</button>
+            <button type="button" class="btn ghost" id="cancelBtn">Cancel</button>
+          </div>
+          <div id="formMsg" class="msg err"></div>
+        </form>
+
+        <ul class="items" id="myItems"></ul>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const MAX_URLS = 5;
+  let myItems = [];
+  let editingId = null; // null = adding a new item
+
+  async function api(path, opts = {}) {
+    const res = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opts });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(body.error || 'Something went wrong'), { status: res.status });
+    return body;
+  }
+
+  function el(tag, props = {}, ...children) {
+    const node = Object.assign(document.createElement(tag), props);
+    node.append(...children);
+    return node;
+  }
+
+  // Show "amazon.com" instead of the full long link.
+  function shortLink(url) {
+    try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+  }
+
+  function itemCard(item, editable) {
+    const actions = editable
+      ? el('div', { className: 'actions' },
+          el('button', { className: 'icon-btn', textContent: 'Edit', onclick: () => openForm(item) }),
+          el('button', { className: 'icon-btn danger', textContent: 'Delete', onclick: () => deleteItem(item) }))
+      : '';
+    const links = item.urls.length
+      ? el('div', { className: 'links' }, ...item.urls.map((u) =>
+          el('a', { href: u, target: '_blank', rel: 'noopener noreferrer', textContent: shortLink(u) + ' ↗', title: u })))
+      : el('div', { className: 'no-links', textContent: 'No links' });
+    // Notes start collapsed; clicking "Notes" expands them.
+    const notes = item.notes
+      ? el('details', { className: 'notes' },
+          el('summary', { textContent: 'Notes' }),
+          el('div', { className: 'notes-body', textContent: item.notes }))
+      : '';
+    return el('li', { className: 'item' },
+      el('div', { className: 'item-top' }, el('div', { className: 'item-name', textContent: item.name }), actions),
+      links, notes);
+  }
+
+  function renderList(listEl, items, editable, emptyText) {
+    listEl.replaceChildren(...(items.length
+      ? items.map((i) => itemCard(i, editable))
+      : [el('li', { className: 'empty', textContent: emptyText })]));
+  }
+
+  function renderRecipient(recipient) {
+    if (!recipient) {
+      $('recipientTitle').textContent = 'Your recipient';
+      $('recipientSub').textContent = '';
+      $('recipientItems').replaceChildren(
+        el('li', { className: 'mystery' },
+          el('div', { className: 'mystery-gift', textContent: '🎁' }),
+          el('div', { className: 'mystery-title', textContent: 'You’ll find out who you’re shopping for soon!' }),
+          el('div', { className: 'mystery-sub', textContent: 'In the meantime, add a few things to your own wishlist so your Secret Santa has ideas.' })));
+      return;
+    }
+    $('recipientTitle').textContent = `Shopping for ${recipient.name}`;
+    $('recipientSub').textContent = 'Here’s what they’re hoping for.';
+    renderList($('recipientItems'), recipient.items, false, `${recipient.name} hasn't added anything yet.`);
+  }
+
+  function renderMine() {
+    renderList($('myItems'), myItems, true, 'Nothing here yet. Add something you’d love to get!');
+  }
+
+  async function showApp() {
+    try {
+      const me = await api('/api/me');
+      $('myName').textContent = me.name;
+      myItems = me.items;
+      renderRecipient(me.recipient);
+      renderMine();
+      $('login').hidden = true;
+      $('app').hidden = false;
+    } catch {
+      $('app').hidden = true;
+      $('login').hidden = false;
+    }
+  }
+
+  // --- Add / edit form ---------------------------------------------------
+
+  function addUrlRow(value = '') {
+    const input = el('input', { type: 'url', inputMode: 'url', placeholder: 'https://…', value });
+    input.setAttribute('aria-label', 'Link');
+    const row = el('div', { className: 'url-row' }, input,
+      el('button', { type: 'button', className: 'icon-btn danger', textContent: '✕', title: 'Remove link',
+        onclick: () => { row.remove(); if (!$('urlRows').children.length) addUrlRow(); updateAddUrl(); } }));
+    $('urlRows').append(row);
+    updateAddUrl();
+    return input;
+  }
+
+  function updateAddUrl() {
+    $('addUrl').hidden = $('urlRows').children.length >= MAX_URLS;
+  }
+
+  function openForm(item = null) {
+    editingId = item ? item.id : null;
+    $('itemName').value = item ? item.name : '';
+    $('urlRows').replaceChildren();
+    (item && item.urls.length ? item.urls : ['']).forEach((u) => addUrlRow(u));
+    $('itemNotes').value = item ? item.notes : '';
+    $('saveBtn').textContent = item ? 'Save changes' : 'Add to wishlist';
+    $('formMsg').textContent = '';
+    $('itemForm').hidden = false;
+    $('addBtn').hidden = true;
+    $('itemForm').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    $('itemName').focus();
+  }
+
+  function closeForm() {
+    $('itemForm').hidden = true;
+    $('addBtn').hidden = false;
+    editingId = null;
+  }
+
+  $('addBtn').addEventListener('click', () => openForm());
+  $('addUrl').addEventListener('click', () => addUrlRow().focus());
+  $('cancelBtn').addEventListener('click', closeForm);
+
+  // The link inputs are type="url" for the phone keyboard, but the server does the
+  // real checking (and accepts "amazon.com/..." without https://), so skip the browser's check.
+  $('itemForm').noValidate = true;
+
+  $('itemForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = $('itemName').value.trim();
+    if (!name) { $('formMsg').textContent = 'Give the item a name.'; return; }
+    const urls = [...$('urlRows').querySelectorAll('input')].map((i) => i.value.trim()).filter(Boolean);
+    const body = JSON.stringify({ name, urls, notes: $('itemNotes').value.trim() });
+    $('saveBtn').disabled = true;
+    try {
+      if (editingId) {
+        await api(`/api/items/${editingId}`, { method: 'PUT', body });
+      } else {
+        await api('/api/items', { method: 'POST', body });
+      }
+      closeForm();
+      await showApp();
+    } catch (err) {
+      $('formMsg').textContent = err.message;
+    } finally {
+      $('saveBtn').disabled = false;
+    }
+  });
+
+  async function deleteItem(item) {
+    if (!confirm(`Remove "${item.name}" from your wishlist?`)) return;
+    try {
+      await api(`/api/items/${item.id}`, { method: 'DELETE' });
+      if (editingId === item.id) closeForm();
+      await showApp();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
+  // --- Login / logout ----------------------------------------------------
+
+  $('login').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $('loginMsg').textContent = '';
+    try {
+      await api('/api/login', { method: 'POST', body: JSON.stringify({ phone: $('phone').value }) });
+      showApp();
+    } catch (err) {
+      $('loginMsg').textContent = err.message;
+    }
+  });
+
+  $('logout').addEventListener('click', async () => {
+    await api('/api/logout', { method: 'POST' });
+    $('phone').value = '';
+    closeForm();
+    showApp();
+  });
+
+  showApp();
+</script>
+</body>
+</html>
