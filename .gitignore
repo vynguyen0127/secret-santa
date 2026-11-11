@@ -1,3 +1,7 @@
-santa.db
+santa.db*
 participants.json
 node_modules/
+.env
+.env.*
+!.env.example
+.vercel

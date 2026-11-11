@@ -36,8 +36,19 @@ npm start                                         # http://localhost:3000
 Recipients are hidden until you run `npm run reveal` — everyone sees a "you'll find out soon" message
 instead. `npm run hide` hides them again. No restart needed.
 
+## Host on Vercel
+
+1. Push this repo to GitHub (never commit `.env` — it's in `.gitignore`).
+2. On vercel.com: **Add New → Project**, import the GitHub repo. Leave the framework as **Other**
+   and the build settings empty.
+3. Under **Environment Variables**, add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (same values as `.env`).
+4. Click **Deploy**. Every later `git push` redeploys automatically.
+
+`vercel.json` sends every request to `api/index.js`, which runs the same code as `npm start`.
+Keep running `npm run draw` / `reveal` / `hide` from your own computer — they talk to the same
+Turso database, so the live site picks up changes on the next page load.
+
 ## Keeping it secret
 
 The site only ever shows someone who *they* give to. The only way to see every match is to
 look inside the database directly (e.g. the Turso dashboard or `turso db shell`), so don't.
-# secret-santa

@@ -21,6 +21,12 @@ function send(res, status, body, headers = {}) {
 }
 
 function readJson(req) {
+  // On Vercel the body may already be parsed for us.
+  if (req.body !== undefined) {
+    const b = req.body;
+    if (b && typeof b === 'object' && !Buffer.isBuffer(b)) return Promise.resolve(b);
+    try { return Promise.resolve(b ? JSON.parse(String(b)) : {}); } catch { return Promise.reject(new Error('Bad JSON')); }
+  }
   return new Promise((resolve, reject) => {
     let data = '';
     req.on('data', (c) => {
@@ -93,13 +99,20 @@ function tooManyFailures(ip) {
 
 const indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
 
-const server = http.createServer(async (req, res) => {
+// Make sure tables exist — once per server start (or per Vercel cold start).
+let ready;
+const ensureReady = () => (ready ??= init().catch((e) => { ready = undefined; throw e; }));
+
+// The request handler. Used by `npm start` below and by Vercel (api/index.js).
+async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
   try {
+    await ensureReady();
     if (req.method === 'GET' && url.pathname === '/') return send(res, 200, indexHtml);
 
     if (req.method === 'POST' && url.pathname === '/api/login') {
-      const ip = req.socket.remoteAddress;
+      // Behind Vercel's proxy the visitor's address is in x-forwarded-for.
+      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress;
       if (tooManyFailures(ip)) return send(res, 429, { error: 'Too many tries. Wait a few minutes.' });
 
       const { phone } = await readJson(req);
@@ -111,7 +124,8 @@ const server = http.createServer(async (req, res) => {
       const token = crypto.randomBytes(32).toString('hex');
       await db.execute({ sql: 'INSERT INTO sessions (token, participant_id, created_at) VALUES (?, ?, ?)', args: [token, user.id, Date.now()] });
       return send(res, 200, { ok: true }, {
-        'Set-Cookie': `session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}`,
+        'Set-Cookie': `session=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${SESSION_DAYS * 86400}`
+          + (req.headers['x-forwarded-proto'] === 'https' ? '; Secure' : ''),
       });
     }
 
@@ -174,8 +188,14 @@ const server = http.createServer(async (req, res) => {
   } catch (e) {
     send(res, 400, { error: e.message });
   }
-});
+}
 
-init().then(() => {
-  server.listen(PORT, () => console.log(`Secret Santa running at http://localhost:${PORT}`));
-});
+module.exports = { handler };
+
+// `npm start` / `node server.js` runs a normal server. On Vercel this file is
+// only imported, so this part is skipped.
+if (require.main === module) {
+  ensureReady().then(() => {
+    http.createServer(handler).listen(PORT, () => console.log(`Secret Santa running at http://localhost:${PORT}`));
+  });
+}
