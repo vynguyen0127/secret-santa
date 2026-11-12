@@ -44,7 +44,8 @@ instead. `npm run hide` hides them again. No restart needed.
 3. Under **Environment Variables**, add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (same values as `.env`).
 4. Click **Deploy**. Every later `git push` redeploys automatically.
 
-`vercel.json` sends every request to `api/index.js`, which runs the same code as `npm start`.
+Vercel picks up `server.js` automatically and calls its exported request handler — the same
+code `npm start` runs. If a Turso setting is missing, the page says which one.
 Keep running `npm run draw` / `reveal` / `hide` from your own computer — they talk to the same
 Turso database, so the live site picks up changes on the next page load.
 

@@ -3,7 +3,13 @@ const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-const { db, init, one, getSetting, normalizePhone } = require('./db');
+// If the database setup fails (e.g. a missing setting on Vercel), remember the
+// reason and show it on every page instead of crashing.
+let startupError;
+const dbModule = (() => {
+  try { return require('./db'); } catch (e) { startupError = e; console.error('Startup error:', e); return {}; }
+})();
+const { db, init, one, getSetting, normalizePhone } = dbModule;
 
 const PORT = process.env.PORT || 3000;
 const SESSION_DAYS = 60;
@@ -108,6 +114,10 @@ const ensureReady = () => (ready ??= init().catch((e) => { ready = undefined; th
 
 // The request handler. Used by `npm start` below and by Vercel (api/index.js).
 async function handler(req, res) {
+  if (startupError) {
+    res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+    return res.end(`Secret Santa couldn't start:\n\n${startupError.message}`);
+  }
   const url = new URL(req.url, 'http://x');
   try {
     await ensureReady();
@@ -194,11 +204,11 @@ async function handler(req, res) {
   }
 }
 
-module.exports = { handler };
+// Vercel imports this file and calls the exported function for each request.
+module.exports = handler;
 
-// `npm start` / `node server.js` runs a normal server. On Vercel this file is
-// only imported, so this part is skipped.
-if (require.main === module) {
+// `npm start` / `node server.js` runs a normal server. Skipped on Vercel.
+if (require.main === module && !process.env.VERCEL) {
   ensureReady().then(() => {
     http.createServer(handler).listen(PORT, () => console.log(`Secret Santa running at http://localhost:${PORT}`));
   });
