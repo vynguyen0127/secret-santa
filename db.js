@@ -7,6 +7,17 @@ try { process.loadEnvFile(path.join(__dirname, '.env')); } catch {}
 
 // Tidy pasted values: drop stray spaces, newlines or surrounding quotes.
 const clean = (v) => (v || '').trim().replace(/^(['"])(.*)\1$/, '$2');
+// On Vercel there's no local file to fall back to, so the Turso settings are required.
+if (process.env.VERCEL && !clean(process.env.TURSO_DATABASE_URL)) {
+  throw new Error(
+    'TURSO_DATABASE_URL is not set for this deployment. In Vercel, open Settings → Environment Variables, ' +
+    `add TURSO_DATABASE_URL and TURSO_AUTH_TOKEN for the "${process.env.VERCEL_ENV}" environment, then redeploy.`
+  );
+}
+if (process.env.VERCEL && !clean(process.env.TURSO_AUTH_TOKEN)) {
+  throw new Error(`TURSO_AUTH_TOKEN is not set for the "${process.env.VERCEL_ENV}" environment in Vercel. Add it, then redeploy.`);
+}
+
 const url = clean(process.env.TURSO_DATABASE_URL) || 'file:' + path.join(__dirname, 'santa.db');
 const authToken = clean(process.env.TURSO_AUTH_TOKEN) || undefined;
 
