@@ -1,16 +1,23 @@
 // Database connection. Uses Turso (hosted SQLite) when TURSO_DATABASE_URL is set,
 // otherwise a local file (santa.db) so you can develop offline.
-const { createClient } = require('@libsql/client');
 const path = require('node:path');
 
 // Load settings from a .env file if one exists (Node 22+ built-in).
 try { process.loadEnvFile(path.join(__dirname, '.env')); } catch {}
 
-const db = createClient(
-  process.env.TURSO_DATABASE_URL
-    ? { url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN }
-    : { url: 'file:' + path.join(__dirname, 'santa.db') }
-);
+// Tidy pasted values: drop stray spaces, newlines or surrounding quotes.
+const clean = (v) => (v || '').trim().replace(/^(['"])(.*)\1$/, '$2');
+const url = clean(process.env.TURSO_DATABASE_URL) || 'file:' + path.join(__dirname, 'santa.db');
+const authToken = clean(process.env.TURSO_AUTH_TOKEN) || undefined;
+
+// Hosted Turso only needs the network client ("web"). The full client also loads a
+// compiled SQLite engine for local files, which Vercel's bundler leaves out — so
+// only load it when actually using a local file.
+const { createClient } = url.startsWith('file:')
+  ? require('@libsql/client')
+  : require('@libsql/client/web');
+
+const db = createClient({ url, authToken });
 
 // Create tables if they don't exist yet. Safe to run every startup.
 async function init() {

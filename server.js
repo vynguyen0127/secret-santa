@@ -97,7 +97,10 @@ function tooManyFailures(ip) {
 
 // --- routes ---------------------------------------------------------------
 
-const indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+// Read the page on first use (not at startup), so a problem shows up as an error
+// message instead of crashing the whole app.
+let indexHtmlCache;
+const indexHtml = () => (indexHtmlCache ??= fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8'));
 
 // Make sure tables exist — once per server start (or per Vercel cold start).
 let ready;
@@ -108,7 +111,7 @@ async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
   try {
     await ensureReady();
-    if (req.method === 'GET' && url.pathname === '/') return send(res, 200, indexHtml);
+    if (req.method === 'GET' && url.pathname === '/') return send(res, 200, indexHtml());
 
     if (req.method === 'POST' && url.pathname === '/api/login') {
       // Behind Vercel's proxy the visitor's address is in x-forwarded-for.
@@ -186,6 +189,7 @@ async function handler(req, res) {
 
     send(res, 404, { error: 'Not found' });
   } catch (e) {
+    console.error(e); // shows up in Vercel's runtime logs
     send(res, 400, { error: e.message });
   }
 }
